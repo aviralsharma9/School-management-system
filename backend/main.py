@@ -18,99 +18,36 @@ from backend.auth.dependencies import (
     require_management_or_principal
 )
 
+from backend.schemas.user import (
+    LoginRequest,
+    UserCreate,
+    UserResponse,
+    RoleAssignment
+)
+from backend.schemas.student import (
+    StudentCreate,
+    StudentProfileResponse,
+    StudentManagementResponse,
+    StudentUpdate
+)
+from backend.schemas.teacher import (
+    TeacherCreate,
+    TeacherUpdate,
+    TeacherProfileResponse
+)
+from backend.schemas.academic import (
+    SectionResponse,
+    SectionCreate,
+    ClassCreate,
+    ClassResponse
+)
+from backend.schemas.assignment import (
+    TeacherAssignmentCreate,
+    TeacherAssignmentResponse,
+    TeacherAssignmentUpdate
+)
+
 app = FastAPI()
-
-# ------------MODELS--------------
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-class StudentCreate(BaseModel):
-    student_id: str
-    name: str
-    section_id: int
-    password: str    
-
-class StudentProfileResponse(BaseModel):
-    student_id: str
-    name: str
-    class_name: str
-    section_name: str
-    is_active: bool
-
-class StudentManagementResponse(BaseModel):
-    student_id: str
-    name: str
-    class_name: str
-    section_name: str
-    is_active: bool    
-
-class StudentUpdate(BaseModel):
-    name: str
-    section_id: int
-
-class SectionResponse(BaseModel):
-    section_id: int
-    class_name: str
-    section_name: str
-
-class SectionCreate(BaseModel):
-    class_id: int
-    section_name: str
-
-class ClassCreate(BaseModel):
-    class_name: str
-
-class ClassResponse(BaseModel):
-    class_id: int
-    class_name: str
-
-class TeacherCreate(BaseModel):
-    teacher_id: str
-    name: str
-    password: str
-
-class TeacherUpdate(BaseModel):
-    name: str
-
-class TeacherProfileResponse(BaseModel):
-    teacher_id: str
-    name: str
-    is_active: bool
-
-class TeacherAssignmentCreate(BaseModel):
-    teacher_id: int
-    section_id: int
-    subject_id: int
-
-class TeacherAssignmentResponse(BaseModel):
-    assignment_id: int
-    teacher_id: str
-    teacher_name: str
-    class_name: str
-    section_name: str
-    subject_name: str
-    is_active: bool
-
-class TeacherAssignmentUpdate(BaseModel):
-    teacher_id: int
-    section_id: int
-    subject_id: int    
-
-class RoleAssignment(BaseModel):
-    role: str    
-
-class UserCreate(BaseModel):
-    username: str
-    name: str
-    password: str
-
-class UserResponse(BaseModel):
-    username: str
-    name: str
-    is_active: bool
-    roles: list[str]
 
 
 # ------------ENDPOINTS-------------
