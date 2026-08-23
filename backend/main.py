@@ -1,19 +1,24 @@
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 import psycopg
-from pwdlib import PasswordHash
-import jwt
-import os
-from dotenv import load_dotenv
 from backend.database import get_db
-
-load_dotenv()
+from backend.auth.security import (
+    password_hash,
+    authenticate_user,
+    create_access_token,
+    verify_token
+)
+from backend.auth.dependencies import (
+    require_student,
+    require_teacher,
+    require_management,
+    require_principal,
+    require_any_role,
+    require_management_or_principal
+)
 
 app = FastAPI()
-password_hash = PasswordHash.recommended()
-SECRET_KEY = os.getenv("SECRET_KEY")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # ------------MODELS--------------
 
@@ -107,228 +112,6 @@ class UserResponse(BaseModel):
     is_active: bool
     roles: list[str]
 
-
-
-#----------HELPER FUNCTION-----------
-
-def authenticate_user(username: str, password: str, connection):
-
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT
-            u.id,
-            u.username,
-            u.password_hash
-        FROM users u
-        WHERE u.username = %s
-        AND u.is_active = TRUE;
-        """,
-        (username,)
-    )
-
-    user = cursor.fetchone()
-
-    if user is None:
-        cursor.close()
-
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
-
-    stored_hash = user[2]
-
-    if not password_hash.verify(password, stored_hash):
-        cursor.close()
-
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
-
-    cursor.execute(
-        """
-        SELECT r.role_name
-        FROM user_roles ur
-        JOIN roles r
-            ON ur.role_id = r.id
-        WHERE ur.user_id = %s;
-        """,
-        (user[0],)
-    )
-
-    roles = [row[0] for row in cursor.fetchall()]
-
-    cursor.close()
-
-    return {
-        "user_id": user[0],
-        "username": user[1],
-        "roles": roles
-    }
-
-def create_access_token(user):
-
-    token_data = {
-        "user_id": user["user_id"],
-        "username": user["username"],
-        "roles": user["roles"]
-    }
-
-    token = jwt.encode(
-        token_data,
-        SECRET_KEY,
-        algorithm="HS256"
-    )
-
-    return token
-
-def verify_token(token: str = Depends(oauth2_scheme)):
-
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=["HS256"]
-        )
-
-        return payload
-
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-
-def require_role(required_role: str):
-
-    def role_checker(
-        payload: dict = Depends(verify_token),
-        connection=Depends(get_db)
-    ):
-
-        user_id = payload["user_id"]
-
-        cursor = connection.cursor()
-
-        try:
-            cursor.execute(
-                """
-                SELECT r.role_name
-                FROM user_roles ur
-                JOIN roles r
-                    ON ur.role_id = r.id
-                JOIN users u
-                    ON ur.user_id = u.id
-                WHERE ur.user_id = %s
-                AND u.is_active = TRUE;
-                """,
-                (user_id,)
-            )
-
-            roles = [
-                row[0]
-                for row in cursor.fetchall()
-            ]
-
-        finally:
-            cursor.close()
-
-        if required_role not in roles:
-            raise HTTPException(
-                status_code=403,
-                detail=f"{required_role} access required"
-            )
-
-        payload["roles"] = roles
-
-        return payload
-
-    return role_checker
-
-def require_student(
-    payload: dict = Depends(require_role("student"))
-):
-    return payload
-
-
-def require_teacher(
-    payload: dict = Depends(require_role("teacher"))
-):
-    return payload
-
-
-def require_management(
-    payload: dict = Depends(require_role("management"))
-):
-    return payload
-
-
-def require_principal(
-    payload: dict = Depends(require_role("principal"))
-):
-    return payload
-
-def require_any_role(*allowed_roles):
-
-    def role_checker(
-        payload: dict = Depends(verify_token),
-        connection=Depends(get_db)
-    ):
-
-        user_id = payload["user_id"]
-
-        cursor = connection.cursor()
-
-        try:
-            cursor.execute(
-                """
-                SELECT r.role_name
-                FROM user_roles ur
-                JOIN roles r
-                    ON ur.role_id = r.id
-                JOIN users u
-                    ON ur.user_id = u.id
-                WHERE ur.user_id = %s
-                AND u.is_active = TRUE;
-                """,
-                (user_id,)
-            )
-
-            roles = [
-                row[0]
-                for row in cursor.fetchall()
-            ]
-
-        finally:
-            cursor.close()
-
-        if not any(
-            role in allowed_roles
-            for role in roles
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to access this resource"
-            )
-
-        payload["roles"] = roles
-
-        return payload
-
-    return role_checker
-
-def require_management_or_principal(
-    payload: dict = Depends(
-        require_any_role(
-            "management",
-            "principal"
-        )
-    )
-):
-    return payload
 
 # ------------ENDPOINTS-------------
 
@@ -2455,3 +2238,4 @@ def get_principals(
         }
         for principal in principals
     ]
+
