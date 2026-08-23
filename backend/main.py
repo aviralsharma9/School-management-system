@@ -4,11 +4,15 @@ from pydantic import BaseModel
 import psycopg
 from pwdlib import PasswordHash
 import jwt
+import os
+from dotenv import load_dotenv
 from backend.database import get_db
+
+load_dotenv()
 
 app = FastAPI()
 password_hash = PasswordHash.recommended()
-SECRET_KEY = "my-super-secret-key"
+SECRET_KEY = os.getenv("SECRET_KEY")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # ------------MODELS--------------
