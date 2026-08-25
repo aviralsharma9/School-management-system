@@ -13,7 +13,8 @@ from backend.routers import (
     teacher_assignments,
     users,
     leadership_staff,
-    academic
+    academic,
+    subjects
 )
 
 app = FastAPI()
@@ -24,6 +25,7 @@ app.include_router(teacher_assignments.router)
 app.include_router(users.router)
 app.include_router(leadership_staff.router)
 app.include_router(academic.router)
+app.include_router(subjects.router)
 
 # ------------verify-token-------------
 
