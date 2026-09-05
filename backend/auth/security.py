@@ -21,8 +21,11 @@ def authenticate_user(username: str, password: str, connection):
         SELECT
             u.id,
             u.username,
-            u.password_hash
+            u.password_hash,
+            p.name
         FROM users u
+        LEFT JOIN profiles p
+            ON p.user_id = u.id
         WHERE u.username = %s
         AND u.is_active = TRUE;
         """,
@@ -67,6 +70,7 @@ def authenticate_user(username: str, password: str, connection):
     return {
         "user_id": user[0],
         "username": user[1],
+        "name": user[3],
         "roles": roles
     }
 

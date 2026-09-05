@@ -72,6 +72,7 @@ def login(
         "access_token": token,
         "token_type": "bearer",
         "username": user["username"],
+        "name": user["name"],
         "roles": user["roles"]
     }
 
