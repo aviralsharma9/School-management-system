@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { login } from '../api/auth'
+import { useAuth } from '../context/AuthContext'
 
 function Login() {
+  const { user, login } = useAuth()
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -13,8 +15,7 @@ function Login() {
     setLoading(true)
 
     try {
-      const data = await login(username, password)
-      alert(`Welcome ${data.name || data.username}! Roles: ${data.roles.join(', ')}`)
+      await login(username, password)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -52,6 +53,11 @@ function Login() {
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+      {user && (
+        <p style={{ marginLeft: 16 }}>
+          Context knows: {user.name || user.username} ({user.roles.join(', ')})
+        </p>
+      )}
     </div>
   )
 }
