@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.database import get_db
@@ -49,6 +49,65 @@ def verify_my_token(payload: dict = Depends(verify_token)):
     return {
         "message": "Token is valid",
         "payload": payload
+    }
+
+# --------Tells current user-----------
+
+@app.get("/me")
+def get_me(
+    payload: dict = Depends(verify_token),
+    connection=Depends(get_db)
+):
+
+    user_id = payload["user_id"]
+
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                u.id,
+                u.username,
+                p.name,
+                u.is_active
+            FROM users u
+            LEFT JOIN profiles p
+                ON p.user_id = u.id
+            WHERE u.id = %s;
+            """,
+            (user_id,)
+        )
+
+        user = cursor.fetchone()
+
+        if user is None or not user[3]:
+            raise HTTPException(
+                status_code=401,
+                detail="User is no longer active"
+            )
+
+        cursor.execute(
+            """
+            SELECT r.role_name
+            FROM user_roles ur
+            JOIN roles r
+                ON ur.role_id = r.id
+            WHERE ur.user_id = %s;
+            """,
+            (user_id,)
+        )
+
+        roles = [row[0] for row in cursor.fetchall()]
+
+    finally:
+        cursor.close()
+
+    return {
+        "user_id": user[0],
+        "username": user[1],
+        "name": user[2],
+        "roles": roles
     }
 
 #-------------login(json)----------------
